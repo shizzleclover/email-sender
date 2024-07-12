@@ -1,53 +1,44 @@
 const express = require('express');
-const bodyParser = require('body-parser');
+const axios = require('axios');
 const nodemailer = require('nodemailer');
-const fetch = require('node-fetch'); // Ensure you have installed node-fetch: npm install node-fetch
 const app = express();
-const port = 3000;
+const PORT = 3000;
 
-// Middleware to parse JSON bodies
-app.use(bodyParser.json());
-app.use(express.static('public'));
+// Replace with your Google Apps Script web app URL
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyiG89Q2t03eWP3XB6P4YX32pRL_p54f6yFFrl1htInUw6JL1u5QZBbn2Por1lInV56RQ/exec';
 
-const GOOGLE_APPS_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL'; // Replace with your Apps Script URL
-
-app.post('/send-email', async (req, res) => {
-  try {
-    // Fetch emails from Google Apps Script
-    const response = await fetch(GOOGLE_APPS_SCRIPT_URL);
-    const emails = await response.json();
-
-    const { content } = req.body;
-
-    let transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: 'your-email@gmail.com', // Your Gmail address
-        pass: 'your-email-password'    // Your Gmail password or App Password
-      }
-    });
-
-    let mailOptions = {
-      from: 'your-email@gmail.com', // Your Gmail address
-      to: emails.join(', '), // Recipients' emails
-      subject: 'Subject of Your Email', // Subject of the email
-      html: content // HTML body content
-    };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Error sending email:', error);
-        return res.status(500).send(error.toString());
-      }
-      console.log('Email sent:', info.response);
-      res.send('Emails sent: ' + info.response);
-    });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Error fetching emails or sending email.');
+// Set up Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // You can use other email services
+  auth: {
+    user: 'kupoluyidemilade@gmail.com',
+    pass: 'xyz290abcd'
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+app.get('/send-confirmation-emails', async (req, res) => {
+  try {
+    // Fetch emails from Google Apps Script web app
+    const response = await axios.get(APPS_SCRIPT_URL);
+    const emails = response.data;
+
+    // Send confirmation emails
+    for (const email of emails) {
+      await transporter.sendMail({
+        from: 'kupoluyidemilade@gmail.com',
+        to: email,
+        subject: 'Confirmation Email',
+        text: 'Thank you for your submission!'
+      });
+    }
+
+    res.send('Confirmation emails sent successfully.');
+  } catch (error) {
+    console.error('Error sending confirmation emails:', error);
+    res.status(500).send('Error sending confirmation emails');
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
